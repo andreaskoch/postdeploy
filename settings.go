@@ -6,32 +6,21 @@ package main
 
 import (
 	"flag"
-	"os"
 )
 
 const (
-	defaultBinding   = ":7070"
-	defaultCommand   = ""
-	defaultDirectory = ""
+	defaultBinding    = ":7070"
+	defaultConfigPath = "deploy.conf.js"
 )
 
 type PostDeploySettings struct {
-	Binding   string
-	Directory string
-	Command   string
+	Binding string
+	Config  string
 }
 
 var Settings PostDeploySettings = PostDeploySettings{}
 
 func init() {
-
-	// use the current directory as the default path
-	defaultDirectory, err := os.Getwd()
-	if err != nil {
-		defaultDirectory = "."
-	}
-
 	flag.StringVar(&Settings.Binding, "binding", defaultBinding, "The http binding")
-	flag.StringVar(&Settings.Directory, "directory", defaultDirectory, "The working directory")
-	flag.StringVar(&Settings.Command, "command", defaultCommand, "The command that will be executed when the deployment hook is triggered")
+	flag.StringVar(&Settings.Config, "config", defaultConfigPath, "The deployment configuration")
 }

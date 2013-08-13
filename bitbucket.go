@@ -19,28 +19,18 @@ func init() {
 	serializer = NewJSONSerializer()
 }
 
-func bitbucket(w http.ResponseWriter, r *http.Request, deploymentRequestJson string) {
+func bitbucket(w http.ResponseWriter, r *http.Request, deploymentRequestJson, directory, command string) {
 
 	// deserialize request
-	deploymentRequest, err := serializer.Deserialize(strings.NewReader(deploymentRequestJson))
+	_, err := serializer.Deserialize(strings.NewReader(deploymentRequestJson))
 	if err != nil {
+		message("Unable to deserialize %s. Error: %s", deploymentRequestJson, err)
 		error500Handler(w, r, err)
 		return
 	}
 
-	// print the request
-	message("Request:")
-	message("%s", deploymentRequestJson)
-
-	message("")
-
-	message("Parsed:")
-	message("%#v", deploymentRequest)
-
-	message("")
-
 	// execute comand
-	execute(Settings.Directory, Settings.Command)
+	go execute(directory, command)
 }
 
 type Bitbucket struct {
