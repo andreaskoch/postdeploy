@@ -4,7 +4,7 @@ postdeploy listens for deployment requests and executes a custom command when th
 
 ## Usage
 
-For running postdeploy you must specify a ip binding (e.g. "127.0.0.1:80") and the path to a JSON configurtion file (e.g. "postdeploy.conf.js"):
+For running postdeploy you must specify an ip binding (e.g. "127.0.0.1:80") and the path to a JSON configurtion file (e.g. "postdeploy.conf.js"):
 
 ```bash
 postdeploy -binding ":7070" -config "postdeploy.conf.js"
@@ -29,7 +29,7 @@ The postdeploy configuration has the following JSON structure:
 }
 ```
 
-When using the above sample configuration, postdeploy will execute the command `modman update-all` in the folder `/var/vhosts/example.com/htdocs` every time a POST request is sent to `http://127.0.0.1:80/deploy/bitbucket/magento-modules` (assuming you binding postdeploy to "127.0.0.1:80").
+When using the above sample configuration, postdeploy will execute the command `modman update-all` in the folder `/var/vhosts/example.com/htdocs` every time a POST request is sent to `http://127.0.0.1:80/deploy/bitbucket/magento-modules` (assuming you bound postdeploy to "127.0.0.1:80").
 
 ## Build Status
 
