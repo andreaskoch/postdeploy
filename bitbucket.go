@@ -34,18 +34,33 @@ func bitbucket(w http.ResponseWriter, r *http.Request, directory, command string
 	}
 
 	// deserialize request
-	_, deserializeError := serializer.Deserialize(strings.NewReader(unescapedRequestBody))
+	postMessage, deserializeError := serializer.Deserialize(strings.NewReader(unescapedRequestBody))
 	if deserializeError != nil {
 		message("Unable to deserialize %s. Error: %s", unescapedRequestBody, deserializeError)
 		error500Handler(w, r, deserializeError)
 		return
 	}
 
+	// get the command parameters from the post message
+	commandParameters := getParameterListFromBitbucketPost(postMessage)
+
+	// expand the command parameters
+	expandedCommand := commandParameters.Expand(command)
+
 	// execute comand
-	go execute(directory, command)
+	go execute(directory, expandedCommand)
 }
 
-type Bitbucket struct {
+func getParameterListFromBitbucketPost(postMessage *BitbucketPostMessage) *ParameterList {
+	parameterList := newParameterList()
+
+	// add the repository name
+	parameterList.Add(PARAMETER_REPOSITORYNAME, postMessage.Repository.Name)
+
+	return parameterList
+}
+
+type BitbucketPostMessage struct {
 	CanonUrl   string              `json:"canon_url"`
 	Commits    []BitbucketCommit   `json:"commits"`
 	Repository BitbucketRepository `json:"repository"`
@@ -59,6 +74,7 @@ type BitbucketCommit struct {
 }
 
 type BitbucketRepository struct {
+	Name        string `json:"name"`
 	AbsoluteUrl string `json:"absolute_url"`
 	Website     string `json:"website"`
 }
@@ -69,7 +85,7 @@ func NewJSONSerializer() *JSONSerializer {
 	return &JSONSerializer{}
 }
 
-func (JSONSerializer) Serialize(writer io.Writer, deploymentRequest *Bitbucket) error {
+func (JSONSerializer) Serialize(writer io.Writer, deploymentRequest *BitbucketPostMessage) error {
 	bytes, err := json.MarshalIndent(deploymentRequest, "", "\t")
 	if err != nil {
 		return err
@@ -79,17 +95,17 @@ func (JSONSerializer) Serialize(writer io.Writer, deploymentRequest *Bitbucket) 
 	return nil
 }
 
-func (JSONSerializer) Deserialize(reader io.Reader) (*Bitbucket, error) {
+func (JSONSerializer) Deserialize(reader io.Reader) (*BitbucketPostMessage, error) {
 	decoder := json.NewDecoder(reader)
-	var deploymentRequest *Bitbucket
+	var deploymentRequest *BitbucketPostMessage
 	err := decoder.Decode(&deploymentRequest)
 	return deploymentRequest, err
 }
 
 type BitbucketSerializer interface {
-	Serialize(writer io.Writer, deploymentRequest *Bitbucket) error
+	Serialize(writer io.Writer, deploymentRequest *BitbucketPostMessage) error
 }
 
 type BitbucketDeserializer interface {
-	Deserialize(reader io.Reader) (*Bitbucket, error)
+	Deserialize(reader io.Reader) (*BitbucketPostMessage, error)
 }
