@@ -8,7 +8,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
@@ -85,13 +84,6 @@ func deploymentHookHandler(w http.ResponseWriter, r *http.Request) {
 	route := matches[2]
 	message("Route: %s", route)
 
-	// read the post body
-	p, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		// handler error
-	}
-	postBody := string(p)
-
 	// find a matching hook
 	var theHook *DeploymentHook
 	for _, hook := range config.Hooks {
@@ -110,7 +102,7 @@ func deploymentHookHandler(w http.ResponseWriter, r *http.Request) {
 	// execute the handler
 	switch theHook.Provider {
 	case "bitbucket":
-		bitbucket(w, r, postBody, theHook.Directory, theHook.Command)
+		bitbucket(w, r, theHook.Directory, theHook.Command)
 	default:
 		generic(theHook.Directory, theHook.Command)
 	}

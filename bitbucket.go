@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -19,13 +20,24 @@ func init() {
 	serializer = NewJSONSerializer()
 }
 
-func bitbucket(w http.ResponseWriter, r *http.Request, deploymentRequestJson, directory, command string) {
+func bitbucket(w http.ResponseWriter, r *http.Request, directory, command string) {
+
+	// extract the payload from the request
+	requestBody := r.PostFormValue("payload")
+
+	// unescape the request body
+	unescapedRequestBody, unescapeError := url.QueryUnescape(requestBody)
+	if unescapeError != nil {
+		message("Unable to unescape request body. Error: %s", unescapeError)
+		error500Handler(w, r, unescapeError)
+		return
+	}
 
 	// deserialize request
-	_, err := serializer.Deserialize(strings.NewReader(deploymentRequestJson))
-	if err != nil {
-		message("Unable to deserialize %s. Error: %s", deploymentRequestJson, err)
-		error500Handler(w, r, err)
+	_, deserializeError := serializer.Deserialize(strings.NewReader(unescapedRequestBody))
+	if deserializeError != nil {
+		message("Unable to deserialize %s. Error: %s", unescapedRequestBody, deserializeError)
+		error500Handler(w, r, deserializeError)
 		return
 	}
 
