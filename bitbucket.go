@@ -55,7 +55,7 @@ func getParameterListFromBitbucketPost(postMessage *BitbucketPostMessage) *Param
 	parameterList := newParameterList()
 
 	// add the repository name
-	parameterList.Add(PARAMETER_REPOSITORYNAME, postMessage.Repository.Name)
+	parameterList.Add(PARAMETER_REPOSITORYNAME, postMessage.Repository.Slug)
 
 	return parameterList
 }
@@ -75,6 +75,8 @@ type BitbucketCommit struct {
 
 type BitbucketRepository struct {
 	Name        string `json:"name"`
+	Slug        string `json:"slug"`
+	Owner       string `json:"owner"`
 	AbsoluteUrl string `json:"absolute_url"`
 	Website     string `json:"website"`
 }
