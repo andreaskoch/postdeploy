@@ -6,11 +6,17 @@ package main
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 )
 
 const (
 	PARAMETER_REPOSITORYNAME = "repository"
+)
+
+var (
+	// Command values can only contain [a-z, 0-9, -, _]
+	IsValidCommandValue = regexp.MustCompile(`^[a-z0-9_-]+$`)
 )
 
 func newParameterList() *ParameterList {
@@ -30,8 +36,17 @@ type ParameterList struct {
 	Values []*CommandParameter
 }
 
-func (parameters *ParameterList) Add(name, value string) {
+func (parameters *ParameterList) Add(name, value string) error {
+
+	// Check if the command value is valid.
+	// Until i found a better way to guard against command injection
+	// i will only allow alpha-numeric characters
+	if !IsValidCommandValue.MatchString(value) {
+		return fmt.Errorf("%q is an invalid command value.", value)
+	}
+
 	parameters.Values = append(parameters.Values, newCommandParameter(name, value))
+	return nil
 }
 
 func (parameters ParameterList) Expand(command string) string {
