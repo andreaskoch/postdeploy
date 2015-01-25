@@ -5,13 +5,13 @@
             "route": "ping",
             "directory": "",
             "commands": [
-            	{
-            		"name": "bash",
-            		"args": [
-            			"-c",
-            			"echo $(date) >> ping.log"
-            		]
-            	}
+                {
+                    "name": "bash",
+                    "args": [
+                        "-c",
+                        "echo $(date) >> ping.log"
+                    ]
+                }
             ]
         }
     ]
