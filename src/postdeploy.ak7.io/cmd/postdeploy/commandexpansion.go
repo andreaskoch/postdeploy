@@ -49,14 +49,24 @@ func (parameters *ParameterList) Add(name, value string) error {
 	return nil
 }
 
-func (parameters ParameterList) Expand(command string) string {
-	for _, parameter := range parameters.Values {
-		// replace placeholders auch as "{Repository}"" with the corresponding value
-		placeholder := fmt.Sprintf("{%s}", parameter.Name)
-		command = strings.Replace(command, placeholder, parameter.Value, -1)
+func (parameters ParameterList) Expand(commands []Command) []Command {
+
+	for _, command := range commands {
+
+		for _, parameter := range parameters.Values {
+			// replace placeholders auch as "{Repository}"" with the corresponding value
+			placeholder := fmt.Sprintf("{%s}", parameter.Name)
+
+			for argumentIndex, commandArgument := range command.Args {
+
+				command.Args[argumentIndex] = strings.Replace(commandArgument, placeholder, parameter.Value, -1)
+			}
+
+		}
+
 	}
 
-	return command
+	return commands
 }
 
 type CommandParameter struct {

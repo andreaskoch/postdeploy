@@ -4,8 +4,8 @@
 
 package main
 
-func generic(directory, command string) {
+func generic(directory string, commands []Command) {
 
 	// execute comand
-	go execute(directory, command)
+	go execute(directory, commands)
 }

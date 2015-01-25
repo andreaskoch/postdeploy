@@ -8,6 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -64,7 +65,10 @@ func deploymentHookHandler(w http.ResponseWriter, r *http.Request) {
 
 	// parse the request url
 	requestUri := r.RequestURI
-	message("Request URI: %s", requestUri)
+
+	if Settings.Verbose {
+		message("Request URI: %s", requestUri)
+	}
 
 	// check the deploy hook
 	isMatch, matches := isMatch(requestUri, deploymentHookPattern)
@@ -77,7 +81,7 @@ func deploymentHookHandler(w http.ResponseWriter, r *http.Request) {
 	provider := matches[1]
 	message("Provider: %s", provider)
 
-	// deted the route
+	// detect the route
 	route := matches[2]
 	message("Route: %s", route)
 
@@ -99,9 +103,9 @@ func deploymentHookHandler(w http.ResponseWriter, r *http.Request) {
 	// execute the handler
 	switch theHook.Provider {
 	case "bitbucket":
-		bitbucket(w, r, theHook.Directory, theHook.Command)
+		bitbucket(w, r, theHook.Directory, theHook.Commands)
 	default:
-		generic(theHook.Directory, theHook.Command)
+		generic(theHook.Directory, theHook.Commands)
 	}
 }
 
@@ -114,69 +118,40 @@ func error404Handler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
 }
 
-func execute(directory, commandText string) {
+func execute(directory string, commands []Command) {
 
-	message("Executing command %q in directory %q", commandText, directory)
+	if directory == "" {
+		directory = getWorkingDirectory()
+	}
 
-	// get the command
-	command := getCmd(directory, commandText)
+	for _, command := range commands {
+		message("Executing command %q in directory %q", command.Name, directory)
+		runCommand(os.Stdout, os.Stderr, directory, command)
+	}
+
+}
+
+// Execute go in the specified go path with the supplied command arguments.
+func runCommand(stdout, stderr io.Writer, workingDirectory string, command Command) {
+
+	// set the go path
+	cmd := exec.Command(command.Name, command.Args...)
+
+	cmd.Dir = workingDirectory
+	cmd.Env = os.Environ()
 
 	// execute the command
-	if err := command.Start(); err != nil {
-		fmt.Println(err)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+
+	if Settings.Verbose {
+		log.Printf("Running %s", command)
 	}
 
-	// wait for the command to finish
-	command.Wait()
-
-	fmt.Println()
-}
-
-func getCmd(directory, commandText string) *exec.Cmd {
-	if commandText == "" {
-		return nil
-	}
-
-	components := strings.Split(commandText, " ")
-
-	// get the command name
-	commandName := components[0]
-
-	// get the command arguments
-	arguments := make([]string, 0)
-	if len(components) > 1 {
-		arguments = components[1:]
-	}
-
-	// create the command
-	command := exec.Command(commandName, arguments...)
-
-	// set the working directory
-	command.Dir = directory
-
-	// redirect command io
-	redirectCommandIO(command)
-
-	return command
-}
-
-func redirectCommandIO(cmd *exec.Cmd) (*os.File, error) {
-	stdout, err := cmd.StdoutPipe()
+	err := cmd.Run()
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("Error running %s: %v", command, err)
 	}
-
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	go io.Copy(os.Stdout, stdout)
-	go io.Copy(os.Stderr, stderr)
-
-	//direct. Masked passwords work OK!
-	cmd.Stdin = os.Stdin
-	return nil, err
 }
 
 func message(text string, args ...interface{}) {
@@ -187,6 +162,16 @@ func message(text string, args ...interface{}) {
 	}
 
 	fmt.Printf(text, args...)
+}
+
+// getWorkingDirectory returns the current working directory path or fails.
+func getWorkingDirectory() string {
+	goPath, err := os.Getwd()
+	if err != nil {
+		log.Fatalf("Failed to get current directory: %v", err)
+	}
+
+	return goPath
 }
 
 // isMatch returns a flag indicating whether the supplied

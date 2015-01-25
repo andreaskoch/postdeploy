@@ -14,6 +14,7 @@ const (
 )
 
 type PostDeploySettings struct {
+	Verbose bool
 	Binding string
 	Config  string
 }
@@ -21,6 +22,7 @@ type PostDeploySettings struct {
 var Settings PostDeploySettings = PostDeploySettings{}
 
 func init() {
+	flag.BoolVar(&Settings.Verbose, "v", false, "Verbose mode")
 	flag.StringVar(&Settings.Binding, "binding", defaultBinding, "The http binding")
 	flag.StringVar(&Settings.Config, "config", defaultConfigPath, "The deployment configuration")
 }

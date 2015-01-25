@@ -15,6 +15,24 @@ git clone git@github.com:andreaskoch/postdeploy.git && cd postdeploy
 go run make.go install
 ```
 
+## Docker
+
+You can also use docker to run postdeploy.
+
+**Build the postdeploy image**:
+
+```
+git clone git@github.com:andreaskoch/postdeploy.git && cd postdeploy
+docker build -t postdeploy .
+```
+
+**Run the postdeploy image**:
+
+```bash
+docker run postdeploy
+```
+
+
 ## Cross-Compilation
 
 If you want to cross-compile postdeploy for different platforms and architectures you can do so by using the `-crosscompile` flag for the make script (if you have [docker](https://www.docker.com) >= 1.4 installed):
@@ -46,7 +64,16 @@ The postdeploy configuration has the following JSON structure:
             "provider": "<provider-name>",
             "route": "some/route",
             "directory": "/the/working/directory",
-            "command": "<Some command>"
+            "commands": [
+                {
+                    "name": "<Some command>",
+                    "args": [
+                        "arg1",
+                        "arg2",
+                        "..."
+                    ]
+                }
+            ]
         }
     ]
 }
@@ -56,7 +83,38 @@ Assuming you bind postdeploy to port `7070` a POST request to `http://127.0.0.1:
 
 ### Examples
 
+#### A simple ping
+
+Write the current date and time to a log file every time the ping route is executed:
+
+```json
+{
+    "hooks": [
+        {
+            "provider": "generic",
+            "route": "ping",
+            "directory": "",
+            "commands": [
+                {
+                    "name": "bash",
+                    "args": [
+                        "-c",
+                        "echo $(date) >> ping.log"
+                    ]
+                }
+            ]
+        }
+    ]
+}
+```
+
+```bash
+curl -X POST http://127.0.0.1:7070/deploy/generic/ping
+```
+
 #### Automated Magento Updates using Bitbucket and modman
+
+Execute `modman update-all` in the Magento website root every time some bushes a commit to bitbucket:
 
 ```json
 {
@@ -65,7 +123,14 @@ Assuming you bind postdeploy to port `7070` a POST request to `http://127.0.0.1:
             "provider": "bitbucket",
             "route": "magento-modules",
             "directory": "/var/vhosts/example.com/htdocs",
-            "command": "modman update-all"
+            "commands": [
+                {
+                    "name": "modman",
+                    "args": [
+                        "update-all"
+                    ]
+                }
+            ]
         }
     ]
 }
@@ -90,10 +155,10 @@ The system will only execute the commands specified in the config file and nothi
 ## Roadmap
 
 - Providers
-	- Add a github provider
+    - Add a github provider
 - Security
-	- Make sure postdeploy executes every hook only once every x seconds.
-	- Block IP addresses that try to find deployment hooks (e.g. block after 3 attempts)
+    - Make sure postdeploy executes every hook only once every x seconds.
+    - Block IP addresses that try to find deployment hooks (e.g. block after 3 attempts)
 
 ## Contribute
 

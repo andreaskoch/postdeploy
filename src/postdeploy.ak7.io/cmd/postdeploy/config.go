@@ -33,10 +33,15 @@ type Config struct {
 }
 
 type DeploymentHook struct {
-	Provider  string `json:"provider"`
-	Route     string `json:"route"`
-	Directory string `json:"directory"`
-	Command   string `json:"command"`
+	Provider  string    `json:"provider"`
+	Route     string    `json:"route"`
+	Directory string    `json:"directory"`
+	Commands  []Command `json:"commands"`
+}
+
+type Command struct {
+	Name string   `json:"name"`
+	Args []string `json:"args"`
 }
 
 type ConfigDeserializer struct{}

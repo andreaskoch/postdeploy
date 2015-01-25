@@ -5,6 +5,10 @@ MAINTAINER Andreas Koch <andy@ak7.io>
 ADD . /go
 RUN go run make.go -install
 
+# Config
+RUN mkdir -p /etc/postdeploy/conf
+ADD conf/ping-sample.json /etc/postdeploy/conf/postdeploy.json
+
 EXPOSE 7070
 
-CMD ["/go/bin/postdeploy", ":7070", "-config", "postdeploy.conf.js"]
+CMD ["/go/bin/postdeploy", "-binding=:7070", "-config=/etc/postdeploy/conf/postdeploy.json"]

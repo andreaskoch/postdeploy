@@ -1,0 +1,18 @@
+{
+    "hooks": [
+        {
+            "provider": "generic",
+            "route": "ping",
+            "directory": "",
+            "commands": [
+            	{
+            		"name": "bash",
+            		"args": [
+            			"-c",
+            			"echo $(date) >> ping.log"
+            		]
+            	}
+            ]
+        }
+    ]
+}

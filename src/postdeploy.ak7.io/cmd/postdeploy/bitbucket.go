@@ -20,7 +20,7 @@ func init() {
 	serializer = NewJSONSerializer()
 }
 
-func bitbucket(w http.ResponseWriter, r *http.Request, directory, command string) {
+func bitbucket(w http.ResponseWriter, r *http.Request, directory string, commands []Command) {
 
 	// extract the payload from the request
 	requestBody := r.PostFormValue("payload")
@@ -45,10 +45,10 @@ func bitbucket(w http.ResponseWriter, r *http.Request, directory, command string
 	commandParameters := getParameterListFromBitbucketPost(postMessage)
 
 	// expand the command parameters
-	expandedCommand := commandParameters.Expand(command)
+	expandedCommands := commandParameters.Expand(commands)
 
 	// execute comand
-	go execute(directory, expandedCommand)
+	go execute(directory, expandedCommands)
 }
 
 func getParameterListFromBitbucketPost(postMessage *BitbucketPostMessage) *ParameterList {
