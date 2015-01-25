@@ -1,4 +1,4 @@
-// Copyright 2013 Andreas Koch. All rights reserved.
+// Copyright 2015 Andreas Koch. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -11,12 +11,9 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"postdeploy.ak7.io/modules/buildinfo"
 	"regexp"
 	"strings"
-)
-
-const (
-	VERSION = "0.1.0"
 )
 
 var (
@@ -28,7 +25,7 @@ var (
 func main() {
 
 	// print application info
-	message("%s (Version: %s)\n\n", os.Args[0], VERSION)
+	message("%s (Version: %s)\n\n", os.Args[0], buildinfo.Version())
 
 	// print usage information if no arguments are supplied
 	if len(os.Args) == 1 {

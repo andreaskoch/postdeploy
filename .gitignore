@@ -1,2 +1,3 @@
-deploy.conf.js
-*.conf.js
+bin/*
+pkg/*
+.DS_Store

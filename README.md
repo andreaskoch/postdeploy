@@ -18,14 +18,14 @@ The postdeploy configuration has the following JSON structure:
 
 ```json
 {
-	"hooks": [
-		{
-			"provider": "bitbucket",
-			"route": "magento-modules",
-			"directory": "/var/vhosts/example.com/htdocs",
-			"command": "modman update-all"
-		}
-	] 
+    "hooks": [
+        {
+            "provider": "bitbucket",
+            "route": "magento-modules",
+            "directory": "/var/vhosts/example.com/htdocs",
+            "command": "modman update-all"
+        }
+    ]
 }
 ```
 
