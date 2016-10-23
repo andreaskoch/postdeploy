@@ -19,7 +19,7 @@ import (
 var (
 	deploymentHookPattern = regexp.MustCompile(`/deploy/([^/]+)/([^/]+)`)
 	applicationName       = "postdeploy"
-	version               = "v2.0.0-dev"
+	version               = "v2.1.0"
 
 	config *Config
 )
