@@ -1,6 +1,6 @@
 # postdeploy
 
-postdeploy is a http service that listens for deployment requests and executes a predefined command when the request arrives.
+postdeploy is a http service that listens for deployment requests and executes a predefined command when the request arrives
 
 ## Build Status
 
@@ -8,11 +8,17 @@ postdeploy is a http service that listens for deployment requests and executes a
 
 ## Build
 
-If you have [go installed](http://golang.org/doc/install) you can run the `make.go` script to build postdeploy yourself:
+If you have [go installed](http://golang.org/doc/install) you can build postdeploy yourself:
 
 ```bash
 git clone git@github.com:andreaskoch/postdeploy.git && cd postdeploy
-go run make.go install
+make
+```
+
+or with `go get`:
+
+```bash
+go get github.com/andreaskoch/postdeploy
 ```
 
 ## Docker
@@ -35,13 +41,11 @@ docker run postdeploy
 
 ## Cross-Compilation
 
-If you want to cross-compile postdeploy for different platforms and architectures you can do so by using the `-crosscompile` flag for the make script (if you have [docker](https://www.docker.com) >= 1.4 installed):
+If you want to cross-compile postdeploy for macOS (amd64), Linux (arm5, arm6, arm7 and amd64) and Windows (amd64) you can use the `crosscompile` action of the make script:
 
 ```bash
-go run make.go -crosscompile
+make crosscompile
 ```
-
-This command will launch a [docker container with go 1.4](https://registry.hub.docker.com/u/library/golang/) in it that is prepared for cross-compilation and build postdeploy for you. The output will be available in the `bin` folder of this project.
 
 ## Usage
 
@@ -112,37 +116,11 @@ Write the current date and time to a log file every time the ping route is execu
 curl -X POST http://127.0.0.1:7070/deploy/generic/ping
 ```
 
-#### Automated Magento Updates using Bitbucket and modman
-
-Execute `modman update-all` in the Magento website root every time some bushes a commit to bitbucket:
-
-```json
-{
-    "hooks": [
-        {
-            "provider": "bitbucket",
-            "route": "magento-modules",
-            "directory": "/var/vhosts/example.com/htdocs",
-            "commands": [
-                {
-                    "name": "modman",
-                    "args": [
-                        "update-all"
-                    ]
-                }
-            ]
-        }
-    ]
-}
-```
-
-When using the above sample configuration, postdeploy will execute the command `modman update-all` in the folder `/var/vhosts/example.com/htdocs` every time a POST request is sent to `http://127.0.0.1:80/deploy/bitbucket/magento-modules` (assuming you bound postdeploy to "127.0.0.1:80").
-
 ### Security
 
 **Do not run this tool on mission critical components!**
 
-I've tried to build the system in a way that the worst thing that could happen is that someone who knows your routes can trigger the deployment hook associated with that route. But this can be bad enough. So please keep in mind that this is just a convienience tool and nothing you should deploy to your production servers.
+I've tried to build the system in a way that the worst thing that could happen is that someone who knows your routes can trigger the deployment hook associated with that route. But this can be bad enough. So please keep in mind that this is just a convenience tool and nothing you should deploy to your production servers.
 
 **Routes**
 

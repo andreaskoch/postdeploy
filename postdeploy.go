@@ -12,13 +12,14 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"postdeploy.ak7.io/modules/buildinfo"
 	"regexp"
 	"strings"
 )
 
 var (
 	deploymentHookPattern = regexp.MustCompile(`/deploy/([^/]+)/([^/]+)`)
+	applicationName       = "postdeploy"
+	version               = "v2.1.0"
 
 	config *Config
 )
@@ -26,7 +27,7 @@ var (
 func main() {
 
 	// print application info
-	message("%s (Version: %s)\n\n", os.Args[0], buildinfo.Version())
+	message("%s (Version: %s)\n\n", applicationName, version)
 
 	// print usage information if no arguments are supplied
 	if len(os.Args) == 1 {
@@ -57,7 +58,12 @@ func main() {
 }
 
 func usage() {
-	message("Usage of %s:\n", os.Args[0])
+	message("%s is a http service that listens for deployment requests and executes a predefined command when the request arrives", applicationName)
+	message("")
+	message("Usage:\n")
+	message("  %s -binding \":7070\" -config \"postdeploy.conf.js\"", applicationName)
+	message("")
+	message("Parameters:\n")
 	flag.PrintDefaults()
 }
 
