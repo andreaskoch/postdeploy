@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"regexp"
 	"strings"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
@@ -148,10 +147,6 @@ func error404Handler(w http.ResponseWriter, r *http.Request) {
 
 func execute(directory string, commands []Command) {
 
-	if directory == "" {
-		directory = getWorkingDirectory()
-	}
-
 	for _, command := range commands {
 		runCommand(os.Stdout, os.Stderr, directory, command)
 	}
@@ -161,37 +156,22 @@ func execute(directory string, commands []Command) {
 // Execute go in the specified go path with the supplied command arguments.
 func runCommand(stdout, stderr io.Writer, workingDirectory string, command Command) {
 
+	expandedWorkingDirectory := os.ExpandEnv(workingDirectory)
+
 	// set the go path
 	cmd := exec.Command(command.Name, command.Args...)
 
-	cmd.Dir = workingDirectory
+	cmd.Dir = expandedWorkingDirectory
 	cmd.Env = os.Environ()
 
 	// execute the command
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 
-	log.Printf("%s: %s %s", workingDirectory, command.Name, strings.Join(command.Args, " "))
+	log.Printf("%s: %s %s", expandedWorkingDirectory, command.Name, strings.Join(command.Args, " "))
 
 	err := cmd.Run()
 	if err != nil {
 		log.Printf("Error running %s: %v", command, err)
 	}
-}
-
-// getWorkingDirectory returns the current working directory path or fails.
-func getWorkingDirectory() string {
-	goPath, err := os.Getwd()
-	if err != nil {
-		log.Fatalf("Failed to get current directory: %v", err)
-	}
-
-	return goPath
-}
-
-// isMatch returns a flag indicating whether the supplied
-// text and pattern do match and if yet, the matched text.
-func isMatch(text string, pattern *regexp.Regexp) (isMatch bool, matches []string) {
-	matches = pattern.FindStringSubmatch(text)
-	return matches != nil, matches
 }
