@@ -6,30 +6,41 @@ package main
 
 import (
 	"encoding/json"
-	"io"
 	"os"
 )
 
-func getConfig(path string) *Config {
+// The configProvider interface returns Config models.
+type configProvider interface {
+	// GetConfig returns a Config model or an error.
+	GetConfig() (Config, error)
+}
+
+// jsonConfigProvider returns Config models from JSON files.
+type jsonConfigProvider struct {
+	path string
+}
+
+// GetConfig returns a Config model or an error.
+func (provider jsonConfigProvider) GetConfig() (Config, error) {
 
 	// open the config file
-	file, err := os.Open(path)
+	file, err := os.Open(provider.path)
 	if err != nil {
-		return nil
+		return Config{}, err
 	}
 
 	// deserialize the config
-	deserializer := NewConfigDeserializer()
-	config, err := deserializer.Deserialize(file)
-	if err != nil {
-		return nil
+	decoder := json.NewDecoder(file)
+	var config Config
+	if err := decoder.Decode(&config); err != nil {
+		return Config{}, err
 	}
 
-	return config
+	return config, nil
 }
 
 type Config struct {
-	Hooks []*DeploymentHook `json:"hooks"`
+	Hooks []DeploymentHook `json:"hooks"`
 }
 
 type DeploymentHook struct {
@@ -42,17 +53,4 @@ type DeploymentHook struct {
 type Command struct {
 	Name string   `json:"name"`
 	Args []string `json:"args"`
-}
-
-type ConfigDeserializer struct{}
-
-func NewConfigDeserializer() *ConfigDeserializer {
-	return &ConfigDeserializer{}
-}
-
-func (ConfigDeserializer) Deserialize(reader io.Reader) (*Config, error) {
-	decoder := json.NewDecoder(reader)
-	var config *Config
-	err := decoder.Decode(&config)
-	return config, err
 }

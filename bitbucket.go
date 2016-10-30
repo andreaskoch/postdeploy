@@ -6,19 +6,11 @@ package main
 
 import (
 	"encoding/json"
-	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
 )
-
-var (
-	serializer *JSONSerializer
-)
-
-func init() {
-	serializer = NewJSONSerializer()
-}
 
 func bitbucket(w http.ResponseWriter, r *http.Request, directory string, commands []Command) {
 
@@ -28,16 +20,17 @@ func bitbucket(w http.ResponseWriter, r *http.Request, directory string, command
 	// unescape the request body
 	unescapedRequestBody, unescapeError := url.QueryUnescape(requestBody)
 	if unescapeError != nil {
-		message("Unable to unescape request body. Error: %s", unescapeError)
+		log.Printf("Error: Unable to unescape request body. Error: %s", unescapeError)
 		error500Handler(w, r, unescapeError)
 		return
 	}
 
 	// deserialize request
-	postMessage, deserializeError := serializer.Deserialize(strings.NewReader(unescapedRequestBody))
-	if deserializeError != nil {
-		message("Unable to deserialize %s. Error: %s", unescapedRequestBody, deserializeError)
-		error500Handler(w, r, deserializeError)
+	decoder := json.NewDecoder(strings.NewReader(unescapedRequestBody))
+	var postMessage BitbucketPostMessage
+	if err := decoder.Decode(&postMessage); err != nil {
+		log.Printf("Error: Unable to deserialize %s. Error: %s", unescapedRequestBody, err)
+		error500Handler(w, r, err)
 		return
 	}
 
@@ -51,7 +44,7 @@ func bitbucket(w http.ResponseWriter, r *http.Request, directory string, command
 	go execute(directory, expandedCommands)
 }
 
-func getParameterListFromBitbucketPost(postMessage *BitbucketPostMessage) *ParameterList {
+func getParameterListFromBitbucketPost(postMessage BitbucketPostMessage) *ParameterList {
 	parameterList := newParameterList()
 
 	// add the repository name
@@ -79,35 +72,4 @@ type BitbucketRepository struct {
 	Owner       string `json:"owner"`
 	AbsoluteUrl string `json:"absolute_url"`
 	Website     string `json:"website"`
-}
-
-type JSONSerializer struct{}
-
-func NewJSONSerializer() *JSONSerializer {
-	return &JSONSerializer{}
-}
-
-func (JSONSerializer) Serialize(writer io.Writer, deploymentRequest *BitbucketPostMessage) error {
-	bytes, err := json.MarshalIndent(deploymentRequest, "", "\t")
-	if err != nil {
-		return err
-	}
-
-	writer.Write(bytes)
-	return nil
-}
-
-func (JSONSerializer) Deserialize(reader io.Reader) (*BitbucketPostMessage, error) {
-	decoder := json.NewDecoder(reader)
-	var deploymentRequest *BitbucketPostMessage
-	err := decoder.Decode(&deploymentRequest)
-	return deploymentRequest, err
-}
-
-type BitbucketSerializer interface {
-	Serialize(writer io.Writer, deploymentRequest *BitbucketPostMessage) error
-}
-
-type BitbucketDeserializer interface {
-	Deserialize(reader io.Reader) (*BitbucketPostMessage, error)
 }

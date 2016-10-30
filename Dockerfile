@@ -15,4 +15,5 @@ ADD conf/ping-sample.json /etc/postdeploy/conf/postdeploy.json
 
 EXPOSE 7070
 
-CMD ["postdeploy", "-binding=:7070", "-config=/etc/postdeploy/conf/postdeploy.json"]
+ENTRYPOINT ["/bin/postdeploy"]
+CMD ["--binding=:7070", "--configfile=/etc/postdeploy/conf/postdeploy.json"]

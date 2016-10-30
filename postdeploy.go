@@ -5,7 +5,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -14,105 +13,128 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+
+	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
-var (
-	deploymentHookPattern = regexp.MustCompile(`/deploy/([^/]+)/([^/]+)`)
-	applicationName       = "postdeploy"
-	version               = "v2.1.0"
+const (
+	defaultBinding    = ":7070"
+	defaultConfigPath = "deploy.conf.js"
 
-	config *Config
+	applicationName = "postdeploy"
+	version         = "v2.1.0"
 )
 
 func main() {
 
-	// print application info
-	message("%s (Version: %s)\n\n", applicationName, version)
+	app := kingpin.New(applicationName, "A http service that listens for deployment requests and executes a set of predefined commands when the request arrives")
+	app.Version(version)
+	bindAddressParameter := app.Flag("binding", "The port and address you want to listen on").Short('b').Default(defaultBinding).OverrideDefaultFromEnvar("POSTDEPLOY_BINDING").String()
+	configFileParameter := app.Flag("configfile", "The deployment configuration").Short('c').Default(defaultConfigPath).OverrideDefaultFromEnvar("POSTDEPLOY_CONFIGFILE").String()
 
-	// print usage information if no arguments are supplied
-	if len(os.Args) == 1 {
-		usage()
-		os.Exit(1)
-	}
+	kingpin.MustParse(app.Parse(os.Args[1:]))
 
-	// parse the flags
-	flag.Parse()
-
-	// get the config
-	config = getConfig(Settings.Config)
-	if config == nil {
-		message("Unable to load config from %q", Settings.Config)
-		os.Exit(2)
-	}
-
-	// attach the deployment handler
-	http.HandleFunc("/", deploymentHookHandler)
-
-	// start the server
-	if err := http.ListenAndServe(Settings.Binding, nil); err != nil {
-		message("%s", err)
+	if err := postDeploy(*bindAddressParameter, *configFileParameter); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
 		os.Exit(1)
 	}
 
 	os.Exit(0)
 }
 
-func usage() {
-	message("%s is a http service that listens for deployment requests and executes a predefined command when the request arrives", applicationName)
-	message("")
-	message("Usage:\n")
-	message("  %s -binding \":7070\" -config \"postdeploy.conf.js\"", applicationName)
-	message("")
-	message("Parameters:\n")
-	flag.PrintDefaults()
+func postDeploy(bindAddress, configFilePath string) error {
+
+	configProvider := jsonConfigProvider{configFilePath}
+	routeBuilder := deploymentRouteBuilder{}
+	hookProvider := configBasedDeploymentHookProvider{configProvider, routeBuilder}
+	server := deploymentServer{bindAddress, hookProvider}
+
+	return server.Run()
 }
 
-func deploymentHookHandler(w http.ResponseWriter, r *http.Request) {
+type deploymentServer struct {
+	bindAddress  string
+	hookProvider deploymentHookProvider
+}
 
-	// parse the request url
-	requestUri := r.RequestURI
+func (server deploymentServer) Run() error {
 
-	if Settings.Verbose {
-		message("Request URI: %s", requestUri)
+	hooks, err := server.hookProvider.GetHooks()
+	if err != nil {
+		return err
 	}
 
-	// check the deploy hook
-	isMatch, matches := isMatch(requestUri, deploymentHookPattern)
-	if !isMatch || len(matches) < 2 {
-		error404Handler(w, r)
-		return
+	for _, hook := range hooks {
+		http.HandleFunc(hook.Route, hook.Handler)
 	}
 
-	// detect the provider
-	provider := matches[1]
-	message("Provider: %s", provider)
+	if err := http.ListenAndServe(server.bindAddress, nil); err != nil {
+		return err
+	}
 
-	// detect the route
-	route := matches[2]
-	message("Route: %s", route)
+	return nil
+}
 
-	// find a matching hook
-	var theHook *DeploymentHook
+type deploymentHandler struct {
+	Route   string
+	Handler http.HandlerFunc
+}
+
+type deploymentHookProvider interface {
+	GetHooks() ([]deploymentHandler, error)
+}
+
+type configBasedDeploymentHookProvider struct {
+	deploymentConfigProvider configProvider
+	deploymentRouteBuilder   routeBuilder
+}
+
+func (hookProvider configBasedDeploymentHookProvider) GetHooks() ([]deploymentHandler, error) {
+
+	config, err := hookProvider.deploymentConfigProvider.GetConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	var handlers []deploymentHandler
 	for _, hook := range config.Hooks {
-		if hook.Provider == provider && hook.Route == route {
-			theHook = hook
-			break
+
+		switch hook.Provider {
+
+		case "bitbucket":
+
+			handlers = append(handlers, deploymentHandler{
+				Route: hookProvider.deploymentRouteBuilder.GetRoute(hook.Provider, hook.Route),
+				Handler: func(w http.ResponseWriter, r *http.Request) {
+					bitbucket(w, r, hook.Directory, hook.Commands)
+				},
+			})
+
+		default:
+
+			handlers = append(handlers, deploymentHandler{
+				Route: hookProvider.deploymentRouteBuilder.GetRoute(hook.Provider, hook.Route),
+				Handler: func(w http.ResponseWriter, r *http.Request) {
+					generic(hook.Directory, hook.Commands)
+				},
+			})
+
 		}
+
 	}
 
-	if theHook == nil {
-		message("No matching hook for provider %q and route %q", provider, route)
-		error404Handler(w, r)
-		return
-	}
+	return handlers, nil
+}
 
-	// execute the handler
-	switch theHook.Provider {
-	case "bitbucket":
-		bitbucket(w, r, theHook.Directory, theHook.Commands)
-	default:
-		generic(theHook.Directory, theHook.Commands)
-	}
+type routeBuilder interface {
+	GetRoute(providerName, routeName string) string
+}
+
+type deploymentRouteBuilder struct {
+}
+
+func (deploymentRouteBuilder) GetRoute(providerName, routeName string) string {
+	return fmt.Sprintf("/deploy/%s/%s", providerName, routeName)
 }
 
 func error500Handler(w http.ResponseWriter, r *http.Request, err error) {
@@ -131,7 +153,6 @@ func execute(directory string, commands []Command) {
 	}
 
 	for _, command := range commands {
-		message("Executing command %q in directory %q", command.Name, directory)
 		runCommand(os.Stdout, os.Stderr, directory, command)
 	}
 
@@ -150,24 +171,12 @@ func runCommand(stdout, stderr io.Writer, workingDirectory string, command Comma
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 
-	if Settings.Verbose {
-		log.Printf("Running %s", command)
-	}
+	log.Printf("%s: %s %s", workingDirectory, command.Name, strings.Join(command.Args, " "))
 
 	err := cmd.Run()
 	if err != nil {
 		log.Printf("Error running %s: %v", command, err)
 	}
-}
-
-func message(text string, args ...interface{}) {
-
-	// append newline character
-	if !strings.HasSuffix(text, "\n") {
-		text += "\n"
-	}
-
-	fmt.Printf(text, args...)
 }
 
 // getWorkingDirectory returns the current working directory path or fails.

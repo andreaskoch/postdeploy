@@ -6,7 +6,7 @@
             "directory": "",
             "commands": [
                 {
-                    "name": "bash",
+                    "name": "/bin/sh",
                     "args": [
                         "-c",
                         "echo $(date) >> ping.log"
