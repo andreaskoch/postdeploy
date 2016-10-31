@@ -157,14 +157,17 @@ func execute(directory string, commands []Command) {
 func runCommand(stdout, stderr io.Writer, workingDirectory string, command Command) {
 
 	expandedWorkingDirectory := os.ExpandEnv(workingDirectory)
+	expandedCommandName := os.ExpandEnv(command.Name)
+	var expandedArguments []string
+	for _, argument := range command.Args {
+		expandedArguments = append(expandedArguments, os.ExpandEnv(argument))
+	}
 
-	// set the go path
-	cmd := exec.Command(command.Name, command.Args...)
+	cmd := exec.Command(expandedCommandName, expandedArguments...)
 
 	cmd.Dir = expandedWorkingDirectory
 	cmd.Env = os.Environ()
 
-	// execute the command
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 
